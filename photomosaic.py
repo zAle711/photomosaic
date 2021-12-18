@@ -3,7 +3,6 @@ import numpy as np
 import math
 import random
 
-from numpy.lib.shape_base import column_stack
 
 def editImage(image):
     pixels = np.array(image)
