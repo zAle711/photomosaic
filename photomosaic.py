@@ -126,7 +126,6 @@ def joinImgs(image, img_match, size) :
     showImage(pixels)
     
 def createNewImage(image, size=30):
-    #calculate pixels average of all photos
     photos_average = avgPixelsPhoto(size)
     main_photo_average = getBlockPixels(image ,size)
     img_match = findBestMatchOfPixels(photos_average, main_photo_average)
