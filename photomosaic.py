@@ -5,34 +5,18 @@ import os
 import pathlib
 import scipy
 from scipy.spatial import distance
-from scipy.spatial.kdtree import distance_matrix
-
-def randomPixels(image, size):
-    """Replace square of pixels with sixe x size area with a radom color
-
-    Args:
-        image (PIL.Image): original image
-        size (int): size of every random color
-    """
-    
-    pixels = np.array(image)
-    COLUMN_LIMIT = (image.width / size) - 1
-    ROW_LIMIT = image.height / size
-    x = 0
-    y = 0
-    while y < ROW_LIMIT :
-        rgb = [random.randint(0,255), random.randint(0,255), random.randint(0,255)]
-        row = y * size
-        column = x * size
-        pixels[row: row + size, column : column + size] = rgb
-        if x < COLUMN_LIMIT:
-            x += 1
-        else:
-            x = 0
-            y += 1
-    showImage(pixels)
 
 def getBlockPixels(image, size):
+    """Calculates the average of every block
+
+    Args:   
+        image (PIL.Image): main image used to calculate the average
+        size (int): size of every block ( 30x30 )
+        
+    Returns: 
+        np.array : reeturn an array that contains the average of every block
+    
+    """
     pixels = np.array(image)
     COLUMN_LIMIT = (image.width / size) - 1
     ROW_LIMIT = (image.height / size)
@@ -46,18 +30,17 @@ def getBlockPixels(image, size):
         row = y * size
         column = x * size
         block = pixels[row: (row + size) , column : (column + size) ]
-        #block = pixels[row: (row + size) , column : (column + size) ] = pixels_average.astype(int)
         avg_blocks[y,x] = computeAvergage(block)
         if x < COLUMN_LIMIT:
             x += 1
         else:
             x = 0
             y += 1
-    print(f"x:{x} y:{y} COLUMN_LIMIT: {COLUMN_LIMIT} ROW_LIMIT: {ROW_LIMIT} count: {count}")
+    #print(f"x:{x} y:{y} COLUMN_LIMIT: {COLUMN_LIMIT} ROW_LIMIT: {ROW_LIMIT} count: {count}")
     return(avg_blocks)
 
-
 def showImage(image_pixels):
+    """ Given an array of pixels shows the image """
     newImage = Image.fromarray(image_pixels)
     newImage.show()
 
@@ -82,6 +65,15 @@ def avgPixelsPhoto(size):
     return all_photo_average
 
 def findBestMatchOfPixels(photos_average, main_photo_average):
+    """ Finds the best match according to the average of a block 
+
+    Args:
+        photos_average (dict): Dictionary with the name of a photo as a key and the averaga of his pixels as value
+        main_photo_average (np.array): Numpy Array with average of every block of pixels
+
+    Returns:
+        np.array: returns a photo for each block of pixels
+    """
     [row, column, dim] = main_photo_average.shape
     pixelMatch = np.empty( (row,column) ).astype(object)
     x = 0
@@ -92,6 +84,7 @@ def findBestMatchOfPixels(photos_average, main_photo_average):
             average = None
             photos = ""
             for photo, avg in photos_average.items():
+                #I use the euclidean distance to find the best match for a given block
                 euclidean_distance = distance.euclidean(p,avg)
                 if euclidean_distance < min_distance:
                     min_distance = euclidean_distance
@@ -103,8 +96,14 @@ def findBestMatchOfPixels(photos_average, main_photo_average):
         x = 0
     return pixelMatch
 
-def joinImgs(image, img_match, size):
-    #print(img_match)
+def joinImgs(image, img_match, size) :
+    """Combine photos to recreate the main image and shows it
+
+    Args:
+        image (PIL.Image): original image where i replace blocks of pixels with one of the photos
+        img_match (np.array): array with photo name for every block
+        size (int): size of a block (30x30) 
+    """
     pixels = np.array(image)
     COLUMN_LIMIT = (image.width / size) - 1
     ROW_LIMIT = (image.height / size)
@@ -116,25 +115,25 @@ def joinImgs(image, img_match, size):
         pixels_average = np.zeros(3)
         row = y * size
         column = x * size
-        path = str(pathlib.Path().parent.resolve()) + r"\foto"
-        pixels[row: (row + size) , column : (column + size) ] = np.array(Image.open(f"{path}\\{img_match[y,x]}").resize( (size,size) ))
-        #block = pixels[row: (row + size) , column : (column + size) ] = pixels_average.astype(int)
+        path = str(pathlib.Path().parent.resolve())
+        path += f"\\foto\\{img_match[y,x]}"
+        pixels[row: (row + size) , column : (column + size) ] = np.array(Image.open(path).resize( (size,size) ))
         if x < COLUMN_LIMIT:
             x += 1
         else:
             x = 0
             y += 1
     showImage(pixels)
-def createNewImage(image):
+    
+def createNewImage(image, size=30):
     #calculate pixels average of all photos
-    photos_average = avgPixelsPhoto(30)
-    main_photo_average = getBlockPixels(image ,30)
+    photos_average = avgPixelsPhoto(size)
+    main_photo_average = getBlockPixels(image ,size)
     img_match = findBestMatchOfPixels(photos_average, main_photo_average)
-    joinImgs(image, img_match, 30)
+    joinImgs(image, img_match, size)
+    
 if __name__ == "__main__":
-    main_image = Image.open("windows1.jpg")
+    main_image = Image.open("windows.jpg")
     print(f"Grandezza dell'immagine: {main_image.height} x {main_image.width}")    
     createNewImage(main_image)
-    #randomPixels(main_image, 30)
-    #print(getBlockPixels(main_image, 30))
 
