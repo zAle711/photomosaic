@@ -6,7 +6,7 @@ import pathlib
 import scipy
 from scipy.spatial import distance
 
-def getBlockPixels(image, size):
+def getBlockPixels(image, size, photos_average):
     """Calculates the average of every block
 
     Args:   
@@ -30,15 +30,39 @@ def getBlockPixels(image, size):
         row = y * size
         column = x * size
         block = pixels[row: (row + size) , column : (column + size) ]
-        avg_blocks[y,x] = computeAvergage(block)
+        #avg_blocks[y,x] = computeAvergage(block)
+        average = computeAvergage(block)
+        image = getMatchingImage(photos_average, average)
+        block = np.array(Image.open(image))
         if x < COLUMN_LIMIT:
             x += 1
         else:
             x = 0
             y += 1
     #print(f"x:{x} y:{y} COLUMN_LIMIT: {COLUMN_LIMIT} ROW_LIMIT: {ROW_LIMIT} count: {count}")
-    return(avg_blocks)
+    #return(avg_blocks)
+    Image.fromarray(pixels).show()
+def getMatchingImage(photos_average, block_average):
+    """Returns the matching photo to a given block of pixels
 
+    Args:   
+        photos_average (dict) : Dictionary with name of every photo as key and average as value
+        average (np.array): average we want to be matched
+    Returns:
+        (str): Returns the name of the image matched
+    """
+    
+    min_distance = float("inf")
+    path = str(pathlib.Path().parent.resolve()) + f"\\foto\\"
+    photo = ""
+    
+    for photo_name, photo_average in photos_average.items():
+        #I use the euclidean distance to find the best match for a given block
+        euclidean_distance = distance.euclidean(block_average,photo_average)
+        if euclidean_distance < min_distance:
+            min_distance = euclidean_distance
+            photo = photo_name
+    return path + photo    
 def showImage(image_pixels):
     """ Given an array of pixels shows the image """
     newImage = Image.fromarray(image_pixels)
@@ -125,11 +149,9 @@ def joinImgs(image, img_match, size) :
             y += 1
     showImage(pixels)
     
-def createNewImage(image, size=30):
+def createNewImage(image, size=20):
     photos_average = avgPixelsPhoto(size)
-    main_photo_average = getBlockPixels(image ,size)
-    img_match = findBestMatchOfPixels(photos_average, main_photo_average)
-    joinImgs(image, img_match, size)
+    main_photo_average = getBlockPixels(image ,size, photos_average)
     
 if __name__ == "__main__":
     main_image = Image.open("windows.jpg")
