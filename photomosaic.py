@@ -1,10 +1,9 @@
 from PIL import Image
 import numpy as np
-import random
 import os
 import pathlib
-import scipy
 from scipy.spatial import distance
+import shutil
 
 def getBlockPixels(image, size, photos_average):
     """Calculates the average of every block
@@ -31,9 +30,11 @@ def getBlockPixels(image, size, photos_average):
         column = x * size
         block = pixels[row: (row + size) , column : (column + size) ]
         #avg_blocks[y,x] = computeAvergage(block)
-        average = computeAvergage(block)
-        image = getMatchingImage(photos_average, average)
-        block = np.array(Image.open(image))
+        block_average = computeAvergage(block)
+        image = getMatchingImage(photos_average, block_average)
+        img_pixels = np.array(Image.open(image))
+        print(f"x:{x} y:{y} row:{row} column:{column} blockShape:{block.shape} imgShape: {img_pixels.shape}")
+        pixels[row: (row + size) , column : (column + size) ] = img_pixels
         if x < COLUMN_LIMIT:
             x += 1
         else:
@@ -42,6 +43,7 @@ def getBlockPixels(image, size, photos_average):
     #print(f"x:{x} y:{y} COLUMN_LIMIT: {COLUMN_LIMIT} ROW_LIMIT: {ROW_LIMIT} count: {count}")
     #return(avg_blocks)
     Image.fromarray(pixels).show()
+
 def getMatchingImage(photos_average, block_average):
     """Returns the matching photo to a given block of pixels
 
@@ -53,7 +55,7 @@ def getMatchingImage(photos_average, block_average):
     """
     
     min_distance = float("inf")
-    path = str(pathlib.Path().parent.resolve()) + f"\\foto\\"
+    path = pathlib.Path().parent.resolve()
     photo = ""
     
     for photo_name, photo_average in photos_average.items():
@@ -62,7 +64,7 @@ def getMatchingImage(photos_average, block_average):
         if euclidean_distance < min_distance:
             min_distance = euclidean_distance
             photo = photo_name
-    return path + photo    
+    return os.path.join(path,"temp" ,photo)   
 def showImage(image_pixels):
     """ Given an array of pixels shows the image """
     newImage = Image.fromarray(image_pixels)
@@ -76,82 +78,36 @@ def computeAvergage (pixels):
             average += p
     average /= pixels.size
     return average.astype(np.uint8)
+    
+def resizeImagesAndCalculateAverage(size):
+    """ Resize all the images to the given size
+    
+    """
+    parent_path = pathlib.Path().parent.resolve()
+    photos_folder_path = os.path.join(parent_path, "foto")
+    temp_folder_path = os.path.join(parent_path, "temp")
 
-def avgPixelsPhoto(size):
-    """ Convert the photo to the given size and then calculates the average of his pixels  """
-    path = str(pathlib.Path().parent.resolve()) + r"\foto"
-    files = os.listdir(path)
+    if not os.path.isdir(temp_folder_path):
+        os.mkdir(temp_folder_path)
+    
+    all_photos = os.listdir(photos_folder_path) 
     all_photo_average = {}
-    for image in files:
-        img = Image.open(f"{path}//{image}").resize( (size,size) )
-        all_photo_average[image] = computeAvergage(np.array(img))
-    
+    for photo in all_photos:
+        img = Image.open(os.path.join(photos_folder_path, photo))
+        img = img.resize( (size, size) )
+        all_photo_average[photo] = computeAvergage(np.array(img))
+        img.save(os.path.join(temp_folder_path, photo))
     return all_photo_average
-
-def findBestMatchOfPixels(photos_average, main_photo_average):
-    """ Finds the best match according to the average of a block 
-
-    Args:
-        photos_average (dict): Dictionary with the name of a photo as a key and the averaga of his pixels as value
-        main_photo_average (np.array): Numpy Array with average of every block of pixels
-
-    Returns:
-        np.array: returns a photo for each block of pixels
-    """
-    [row, column, dim] = main_photo_average.shape
-    pixelMatch = np.empty( (row,column) ).astype(object)
-    x = 0
-    y = 0
-    for blocks in main_photo_average:
-        for p in blocks:
-            min_distance = float("inf")
-            average = None
-            photos = ""
-            for photo, avg in photos_average.items():
-                #I use the euclidean distance to find the best match for a given block
-                euclidean_distance = distance.euclidean(p,avg)
-                if euclidean_distance < min_distance:
-                    min_distance = euclidean_distance
-                    average = avg
-                    photos = photo
-            pixelMatch[y,x] = photos
-            x += 1
-        y += 1
-        x = 0
-    return pixelMatch
-
-def joinImgs(image, img_match, size) :
-    """Combine photos to recreate the main image and shows it
-
-    Args:
-        image (PIL.Image): original image where i replace blocks of pixels with one of the photos
-        img_match (np.array): array with photo name for every block
-        size (int): size of a block (30x30) 
-    """
-    pixels = np.array(image)
-    COLUMN_LIMIT = (image.width / size) - 1
-    ROW_LIMIT = (image.height / size)
-    x = 0
-    y = 0
-    count = 0
-    while y < ROW_LIMIT :
-        count += 1
-        pixels_average = np.zeros(3)
-        row = y * size
-        column = x * size
-        path = str(pathlib.Path().parent.resolve())
-        path += f"\\foto\\{img_match[y,x]}"
-        pixels[row: (row + size) , column : (column + size) ] = np.array(Image.open(path).resize( (size,size) ))
-        if x < COLUMN_LIMIT:
-            x += 1
-        else:
-            x = 0
-            y += 1
-    showImage(pixels)
     
-def createNewImage(image, size=20):
-    photos_average = avgPixelsPhoto(size)
-    main_photo_average = getBlockPixels(image ,size, photos_average)
+def deleteTempImages():
+    temp_folder_path = os.path.join(pathlib.Path().parent.resolve(), "temp")
+    if os.path.isdir(temp_folder_path):
+        shutil.rmtree(temp_folder_path)
+
+def createNewImage(image, size=30):
+    photos_average = resizeImagesAndCalculateAverage(size)
+    getBlockPixels(image, size, photos_average)
+    deleteTempImages()
     
 if __name__ == "__main__":
     main_image = Image.open("windows.jpg")
