@@ -33,7 +33,7 @@ def getBlockPixels(image, size, photos_average):
         block_average = computeAvergage(block)
         image = getMatchingImage(photos_average, block_average)
         img_pixels = np.array(Image.open(image))
-        print(f"x:{x} y:{y} row:{row} column:{column} blockShape:{block.shape} imgShape: {img_pixels.shape}")
+        #print(f"x:{x} y:{y} row:{row} column:{column} blockShape:{block.shape} imgShape: {img_pixels.shape}")
         pixels[row: (row + size) , column : (column + size) ] = img_pixels
         if x < COLUMN_LIMIT:
             x += 1
@@ -42,7 +42,7 @@ def getBlockPixels(image, size, photos_average):
             y += 1
     #print(f"x:{x} y:{y} COLUMN_LIMIT: {COLUMN_LIMIT} ROW_LIMIT: {ROW_LIMIT} count: {count}")
     #return(avg_blocks)
-    Image.fromarray(pixels).show()
+    saveImage(pixels)
 
 def getMatchingImage(photos_average, block_average):
     """Returns the matching photo to a given block of pixels
@@ -65,10 +65,11 @@ def getMatchingImage(photos_average, block_average):
             min_distance = euclidean_distance
             photo = photo_name
     return os.path.join(path,"temp" ,photo)   
-def showImage(image_pixels):
-    """ Given an array of pixels shows the image """
+def saveImage(image_pixels):
+    """ Given an array of pixels saves the image """
+    path = os.path.join(pathlib.Path().parent.resolve(), "newImage.jpg")
     newImage = Image.fromarray(image_pixels)
-    newImage.show()
+    newImage.save(path)
 
 def computeAvergage (pixels):
     """Calculates the average of a chunk of pixels"""
@@ -104,7 +105,7 @@ def deleteTempImages():
     if os.path.isdir(temp_folder_path):
         shutil.rmtree(temp_folder_path)
 
-def createNewImage(image, size=30):
+def createNewImage(image, size=20):
     photos_average = resizeImagesAndCalculateAverage(size)
     getBlockPixels(image, size, photos_average)
     deleteTempImages()
