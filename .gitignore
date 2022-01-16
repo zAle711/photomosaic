@@ -130,5 +130,5 @@ dmypy.json
 
 #Foto
 *.jpg
-foto/
+photo/
 workspace.code-workspace
